@@ -1,0 +1,12 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+<module name="mavcourse_team8" dir="mavcourse_team8">
+  <doc>
+    <description>Team 8 mav course module.</description>
+  </doc>
+  <header>
+    <file name="mavcourse_team8.h"/>
+  </header>
+  <makefile>
+    <file name="mavcourse_team8.c"/>
+  </makefile>
+</module>
