@@ -25,8 +25,8 @@
  * define which filter to use.
  */
 
-#ifndef ORANGE_AVOIDER_GUIDED_H
-#define ORANGE_AVOIDER_GUIDED_H
+#ifndef MAVCOURSE_TEAM8_H
+#define MAVCOURSE_TEAM8_H
 
 // settings
 extern float oag_color_count_frac;  // obstacle detection threshold as a fraction of total of image
@@ -34,8 +34,8 @@ extern float oag_floor_count_frac;  // floor detection threshold as a fraction o
 extern float oag_max_speed;         // max flight speed [m/s]
 extern float oag_heading_rate;      // heading rate setpoint [rad/s]
 
-extern void orange_avoider_guided_init(void);
-extern void orange_avoider_guided_periodic(void);
+extern void mavcourse_team8_init(void);
+extern void mavcourse_team8_periodic(void);
 
 #endif
 

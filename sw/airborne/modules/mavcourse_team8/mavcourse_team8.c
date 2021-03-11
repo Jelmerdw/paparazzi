@@ -25,7 +25,7 @@
  * define which filter to use.
  */
 
-#include "modules/orange_avoider/orange_avoider_guided.h"
+#include "modules/mavcourse_team8/mavcourse_team8.h"
 #include "firmwares/rotorcraft/guidance/guidance_h.h"
 #include "generated/airframe.h"
 #include "state.h"
@@ -99,7 +99,7 @@ static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
 /*
  * Initialisation function
  */
-void orange_avoider_guided_init(void)
+void mavcourse_team8_init(void)
 {
   // Initialise random values
   srand(time(NULL));
@@ -113,7 +113,7 @@ void orange_avoider_guided_init(void)
 /*
  * Function that checks it is safe to move forwards, and then sets a forward velocity setpoint or changes the heading
  */
-void orange_avoider_guided_periodic(void)
+void mavcourse_team8_periodic(void)
 {
   // Only run the mudule if we are in the correct flight mode
   if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
