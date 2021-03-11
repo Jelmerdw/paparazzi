@@ -1,11 +1,13 @@
 <!DOCTYPE module SYSTEM "module.dtd">
 <module name="mavcourse_team8" dir="mavcourse_team8">
   <doc>
-    <description>Team 8 mav course module.</description>
+    <description>Team 8 mav course module for course AE4317 Autonomous Flight of Micro Air Vehicles of TU Delft faculty of Aerospace Engineering.</description>
   </doc>
   <header>
     <file name="mavcourse_team8.h"/>
   </header>
+  <init fun="mavcourse_team8_init()"/>
+  <periodic fun="mavcourse_team8_periodic()" freq="4"/>
   <makefile>
     <file name="mavcourse_team8.c"/>
   </makefile>
