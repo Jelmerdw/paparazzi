@@ -203,7 +203,10 @@
       <field name="yaw"       type="int16_t">Yaw input in pprz_t [-9600;9600]</field>
       <field name="throttle"  type="int16_t">Throttle input in pprz_t [0;9600] or [-9600;9600] (for vertical speed control for instance)</field>
     </message>
-
+    
+    <message name="mavlabcourse_team8" id="88">
+    <field name="test_message" type="int16_t">Test message</field>
+    </message>
   </msg_class>
 
 </protocol>
