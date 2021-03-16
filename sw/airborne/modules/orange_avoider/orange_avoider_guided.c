@@ -175,7 +175,7 @@ void orange_avoider_guided_periodic(void)
       break;
     case OUT_OF_BOUNDS:
       // stop
-      guidance_h_set_guided_body_vel(0, 0);
+      guidance_h_set_guided_body_vel(0, -1);
 
       // start turn back into arena
       guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));
