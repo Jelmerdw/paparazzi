@@ -52,7 +52,7 @@ PRINT_CONFIG_VAR(FPS)
 enum navigation_state_t {
 	FOLLOWING,
 	OUT_OF_BOUNDS,
-	SEARCH_FOR_NEW_HEADING
+	REENTER_ARENA
 };
 
 enum navigation_state_t navigation_state = FIND_NEW_HEADING;
@@ -101,23 +101,46 @@ void mavcourse_team8_periodic(void)
 
 	switch (navigation_state){
 		case FOLLOWING:
+
 			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;
 			guidance_h_set_guided_heading_rate(heading_rate);
 			VERBOSE_PRINT("Heading rate: %f \n", heading_rate);
 			float speed_setting = ((float)x_clear-(float)x_max/2) * speed_gain;
-			guidance_h_set_guided_body_vel(speed,0);
+			guidance_h_set_guided_body_vel(speed_setting,0);
+
+			if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
+						        navigation_state = OUT_OF_BOUNDS;
 
 			break;
 
-		case SEARCH_FOR_NEW_HEADING:
+		//case SEARCH_FOR_NEW_HEADING:
 
 
-			break;
+			//break;
 
 		case OUT_OF_BOUNDS:
+			// stop
+		    guidance_h_set_guided_body_vel(0, -1);
 
+		    // start turn back into arena
+		    guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));
+
+		    navigation_state = REENTER_ARENA;
 
 			break;
+
+		case REENTER_ARENA:
+		      // force floor center to opposite side of turn to head back into arena
+		      if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
+		        // return to heading mode
+		        guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
+
+		        // reset safe counter
+		        obstacle_free_confidence = 0;
+
+		        // ensure direction is safe before continuing
+		        navigation_state = FOLLOWING;
+		      }
 	}
 //printf("TEST periodic \n");
 }
