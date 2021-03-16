@@ -33,16 +33,35 @@
 #include <stdio.h>
 #include <time.h>
 
+#define MAVCOURSE_TEAM8_VERBOSE TRUE
+
+#define PRINT(string,...) fprintf(stderr, "[MAVcourse team 8->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+#if MAVCOURSE_TEAM8_VERBOSE
+#define VERBOSE_PRINT PRINT
+#else
+#define VERBOSE_PRINT(...)
+#endif
+
+//Define FPS:
+#ifndef FPS
+#define FPS 0       ///< Default FPS (zero means run at camera fps)
+#endif
+PRINT_CONFIG_VAR(FPS)
+
 // Setting possible states
 enum navigation_state_t {
-  SAFE,
-  ADJUST,
-  FIND_NEW_HEADING,
-  OUT_OF_BOUNDS,
-  REENTER_ARENA
+	FOLLOWING,
+	OUT_OF_BOUNDS,
+	SEARCH_FOR_NEW_HEADING
 };
+
+enum navigation_state_t navigation_state = FIND_NEW_HEADING;
+
 uint16_t x_clear = 0;
-uint16_t x_max = 100;
+uint16_t x_max = FRAME_WIDTH;
+float heading_gain =0.0;
+float speed_gain = 0.0;
+
 
 // Define event for ABI messaging
 static abi_event direction_ev;
@@ -51,15 +70,28 @@ static void direction_cb(uint16_t x_coord){
 	x_clear = x_coord;
 }
 
+struct image_t *get_image(struct image_t *img);
+struct image_t *get_image(struct image_t *img)
+{
+  auto time = img->pprz_ts;
+  printf("%d", time);
+  printf("\n");
+  return img;
+}
+
 
 /*
  * Initialisation function
  */
 void mavcourse_team8_init(void)
 {
-	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
-	AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
+cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
 }
+
+// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
+//AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
+
+
 
 /*
  * Function that checks it is safe to move forwards, and then sets a forward velocity setpoint or changes the heading
@@ -67,4 +99,25 @@ void mavcourse_team8_init(void)
 void mavcourse_team8_periodic(void)
 {
 
+	switch (navigation_state){
+		case FOLLOWING:
+			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;
+			guidance_h_set_guided_heading_rate(heading_rate);
+			VERBOSE_PRINT("Heading rate: %f \n", heading_rate);
+			float speed_setting = ((float)x_clear-(float)x_max/2) * speed_gain;
+			guidance_h_set_guided_body_vel(speed,0);
+
+			break;
+
+		case SEARCH_FOR_NEW_HEADING:
+
+
+			break;
+
+		case OUT_OF_BOUNDS:
+
+
+			break;
+	}
+//printf("TEST periodic \n");
 }
