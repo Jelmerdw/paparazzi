@@ -84,6 +84,7 @@
     </module>
     <module name="mavcourse_team8">
       <define name="VERTICAL_EDGE_DETECTION_ID" value="VED_ID"/>
+      <define name="FRAME_WIDTH" value="120"/>
     </module>
     <module name="video_rtp_stream">
       <define name="VIEWVIDEO_CAMERA" value="front_camera"/>

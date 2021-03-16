@@ -33,16 +33,30 @@
 #include <stdio.h>
 #include <time.h>
 
+#define MAVCOURSE_TEAM8_VERBOSE TRUE
+
+#define PRINT(string,...) fprintf(stderr, "[MAVcourse team 8->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+#if MAVCOURSE_TEAM8_VERBOSE
+#define VERBOSE_PRINT PRINT
+#else
+#define VERBOSE_PRINT(...)
+#endif
+
+
 // Setting possible states
 enum navigation_state_t {
-  SAFE,
-  ADJUST,
-  FIND_NEW_HEADING,
-  OUT_OF_BOUNDS,
-  REENTER_ARENA
+	FOLLOWING,
+	OUT_OF_BOUNDS,
+	SEARCH_FOR_NEW_HEADING
 };
+
+enum navigation_state_t navigation_state = FIND_NEW_HEADING;
+
 uint16_t x_clear = 0;
-uint16_t x_max = 100;
+uint16_t x_max = FRAME_WIDTH;
+float heading_gain =0.0;
+float speed_gain = 0.0;
+
 
 // Define event for ABI messaging
 static abi_event direction_ev;
@@ -50,7 +64,6 @@ static abi_event direction_ev;
 static void direction_cb(uint16_t x_coord){
 	x_clear = x_coord;
 }
-
 
 /*
  * Initialisation function
@@ -66,5 +79,24 @@ void mavcourse_team8_init(void)
  */
 void mavcourse_team8_periodic(void)
 {
+	switch (navigation_state){
+		case FOLLOWING:
+			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;
+			guidance_h_set_guided_heading_rate(heading_rate);
+			VERBOSE_PRINT("Heading rate: %f \n", heading_rate);
+			float speed_setting = ((float)x_clear-(float)x_max/2) * speed_gain;
+			guidance_h_set_guided_body_vel(speed,0);
 
+			break;
+
+		case SEARCH_FOR_NEW_HEADING:
+
+
+			break;
+
+		case OUT_OF_BOUNDS:
+
+
+			break;
+	}
 }
