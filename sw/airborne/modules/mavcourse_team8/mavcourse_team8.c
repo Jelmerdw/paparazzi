@@ -33,11 +33,30 @@
 #include <stdio.h>
 #include <time.h>
 
+
 //Define FPS:
 #ifndef FPS
 #define FPS 0       ///< Default FPS (zero means run at camera fps)
 #endif
 PRINT_CONFIG_VAR(FPS)
+
+// Setting possible states
+enum navigation_state_t {
+  SAFE,
+  ADJUST,
+  FIND_NEW_HEADING,
+  OUT_OF_BOUNDS,
+  REENTER_ARENA
+};
+uint16_t x_clear = 0;
+uint16_t x_max = 100;
+
+// Define event for ABI messaging
+static abi_event direction_ev;
+// Callback function for ABI messaging
+static void direction_cb(uint16_t x_coord){
+	x_clear = x_coord;
+}
 
 struct image_t *get_image(struct image_t *img);
 struct image_t *get_image(struct image_t *img)
@@ -55,6 +74,9 @@ void mavcourse_team8_init(void)
 {
 cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
 }
+
+// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
+//AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
 
 
 
