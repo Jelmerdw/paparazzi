@@ -33,20 +33,35 @@
 #include <stdio.h>
 #include <time.h>
 
+//Define FPS:
+#ifndef FPS
+#define FPS 0       ///< Default FPS (zero means run at camera fps)
+#endif
+PRINT_CONFIG_VAR(FPS)
 
+struct image_t *get_image(struct image_t *img);
+struct image_t *get_image(struct image_t *img)
+{
+  auto time = img->pprz_ts;
+  printf("%d", time);
+  printf("\n");
+  return img;
+}
 
 /*
  * Initialisation function
  */
 void mavcourse_team8_init(void)
 {
-
+cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
 }
+
+
 
 /*
  * Function that checks it is safe to move forwards, and then sets a forward velocity setpoint or changes the heading
  */
 void mavcourse_team8_periodic(void)
 {
-
+//printf("TEST periodic \n");
 }
