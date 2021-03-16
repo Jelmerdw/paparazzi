@@ -42,6 +42,11 @@
 #define VERBOSE_PRINT(...)
 #endif
 
+//Define FPS:
+#ifndef FPS
+#define FPS 0       ///< Default FPS (zero means run at camera fps)
+#endif
+PRINT_CONFIG_VAR(FPS)
 
 // Setting possible states
 enum navigation_state_t {
@@ -65,20 +70,35 @@ static void direction_cb(uint16_t x_coord){
 	x_clear = x_coord;
 }
 
+struct image_t *get_image(struct image_t *img);
+struct image_t *get_image(struct image_t *img)
+{
+  auto time = img->pprz_ts;
+  printf("%d", time);
+  printf("\n");
+  return img;
+}
+
+
 /*
  * Initialisation function
  */
 void mavcourse_team8_init(void)
 {
-	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
-	AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
+cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
 }
+
+// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
+//AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
+
+
 
 /*
  * Function that checks it is safe to move forwards, and then sets a forward velocity setpoint or changes the heading
  */
 void mavcourse_team8_periodic(void)
 {
+
 	switch (navigation_state){
 		case FOLLOWING:
 			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;
@@ -99,4 +119,5 @@ void mavcourse_team8_periodic(void)
 
 			break;
 	}
+//printf("TEST periodic \n");
 }
