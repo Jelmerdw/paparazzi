@@ -84,6 +84,7 @@
     </module>
     <module name="mavcourse_team8">
       <define name="VERTICAL_EDGE_DETECTION_ID" value="VED_ID"/>
+      <define name="FLOOR_VISUAL_DETECTION_ID" value="COLOR_OBJECT_DETECTION2_ID"/>
       <define name="FRAME_WIDTH" value="120"/>
       <define name="CAMERA" value="front_camera"/> <!--for cv_add_to_device-->
     </module>

@@ -65,11 +65,18 @@ enum navigation_state_t navigation_state = FIND_NEW_HEADING;
 
 uint16_t x_clear = 0;
 uint16_t x_max = FRAME_WIDTH;
+int32_t floor_count = 0;
+int32_t floor_centroid = 0;
+float avoidance_heading_direction = 0;
 
 // Initiate setting variables
 float heading_gain = 1.0f;
 float speed_gain = 1.0f;
 int acceptance_width = 20;
+int x_coord = 0;
+float heading_rate = 0.f;
+float speed_setting = 0.f;
+float oag_floor_count_frac = 0.18f;
 
 
 // Define event for ABI messaging
@@ -77,14 +84,15 @@ static abi_event direction_ev;
 // Callback function for ABI messaging
 static void direction_cb(uint16_t x_coord){
 	x_clear = x_coord;
-// }
+ }
+
 
 struct image_t *get_image(struct image_t *img);
 struct image_t *get_image(struct image_t *img)
 {
   auto time = img->pprz_ts;
-  printf("%d", time);
-  printf("\n");
+  //printf("%d", time);
+  //printf("\n");
 	opencv_example((char *) img->buf, img->w, img->h);
   return img;
 }
@@ -112,7 +120,7 @@ void mavcourse_team8_init(void)
 {
 	cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
 	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
-	AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
+	//AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
 
 	// ABI message for floor detection (copied from orange avoider guided)
 	AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
@@ -123,26 +131,28 @@ void mavcourse_team8_init(void)
  */
 void mavcourse_team8_periodic(void)
 {
-	  int32_t floor_count_threshold = oag_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
-	  float floor_centroid_frac = floor_centroid / (float)front_camera.output_size.h / 2.f;
+	printf("State: %d \n", navigation_state);
+	int32_t floor_count_threshold = oag_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+	float floor_centroid_frac = floor_centroid / (float)front_camera.output_size.h / 2.f;
 
 	switch (navigation_state){
 		case FIND_NEW_HEADING:
-			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
+			heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
 			guidance_h_set_guided_heading_rate(heading_rate);
+			printf("Heading rate: %f \n", heading_rate);
 			if((x_clear-x_max/2)*(x_clear-x_max/2) < acceptance_width){
-
+				navigation_state = FOLLOWING;
 			}
 			break;
 
 		case FOLLOWING:
-			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
+			heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
 			guidance_h_set_guided_heading_rate(heading_rate);
-			VERBOSE_PRINT("Heading rate: %f \n", heading_rate);
+			printf("Heading rate: %f \n", heading_rate);
 
-			float speed_setting = (1.f/(float)x_clear-(float)x_max) * speed_gain; //Inverse relation to speed and centeredness of dot
+			speed_setting = (1.f/(float)x_clear-(float)x_max) * speed_gain; //Inverse relation to speed and centeredness of dot
 			guidance_h_set_guided_body_vel(speed_setting,0);
-			VERBOSE_PRINT("Speed: %f\n", speed_setting);
+			printf("Speed: %f \n", speed_setting);
 
 			if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
 			        navigation_state = OUT_OF_BOUNDS;
@@ -164,6 +174,5 @@ void mavcourse_team8_periodic(void)
 	 	      }
 	 	    break;
  	      }
-	}
 	return;
 }
