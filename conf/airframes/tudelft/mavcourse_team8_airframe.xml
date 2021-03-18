@@ -85,6 +85,7 @@
     <module name="mavcourse_team8">
       <define name="VERTICAL_EDGE_DETECTION_ID" value="VED_ID"/>
       <define name="FRAME_WIDTH" value="120"/>
+      <define name="CAMERA" value="front_camera"/> <!--for cv_add_to_device-->
     </module>
     <module name="video_rtp_stream">
       <define name="VIEWVIDEO_CAMERA" value="front_camera"/>
@@ -92,6 +93,11 @@
       <define name="VIEWVIDEO_DOWNSIZE_FACTOR" value="1"/>
       <define name="VIEWVIDEO_QUALITY_FACTOR" value="40"/>
     </module>
+    <!--error to solce:
+    <module name="cv_opencvdemo">
+      <define name="OPENCVDEMO_CAMERA" value="front_camera"/> 
+    </module>
+     -->
   </firmware>
 
   <commands>

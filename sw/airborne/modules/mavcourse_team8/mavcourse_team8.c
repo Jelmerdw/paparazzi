@@ -33,14 +33,14 @@
 #include <stdio.h>
 #include <time.h>
 
-#define MAVCOURSE_TEAM8_VERBOSE TRUE
+// #define MAVCOURSE_TEAM8_VERBOSE TRUE
 
-#define PRINT(string,...) fprintf(stderr, "[MAVcourse team 8->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
-#if MAVCOURSE_TEAM8_VERBOSE
-#define VERBOSE_PRINT PRINT
-#else
-#define VERBOSE_PRINT(...)
-#endif
+// #define PRINT(string,...) fprintf(stderr, "[MAVcourse team 8->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+// #if MAVCOURSE_TEAM8_VERBOSE
+// #define VERBOSE_PRINT PRINT
+// #else
+// #define VERBOSE_PRINT(...)
+// #endif
 
 //Define FPS:
 #ifndef FPS
@@ -48,27 +48,27 @@
 #endif
 PRINT_CONFIG_VAR(FPS)
 
-// Setting possible states
-enum navigation_state_t {
-	FOLLOWING,
-	OUT_OF_BOUNDS,
-	REENTER_ARENA
-};
+// // Setting possible states
+// enum navigation_state_t {
+// 	FOLLOWING,
+// 	OUT_OF_BOUNDS,
+// 	REENTER_ARENA
+// };
 
-enum navigation_state_t navigation_state = FIND_NEW_HEADING;
+// enum navigation_state_t navigation_state = FIND_NEW_HEADING;
 
-uint16_t x_clear = 0;
-uint16_t x_max = FRAME_WIDTH;
-float heading_gain =0.0;
-float speed_gain = 0.0;
+// uint16_t x_clear = 0;
+// uint16_t x_max = FRAME_WIDTH;
+// float heading_gain =0.0;
+// float speed_gain = 0.0;
 
 
-// Define event for ABI messaging
-static abi_event direction_ev;
-// Callback function for ABI messaging
-static void direction_cb(uint16_t x_coord){
-	x_clear = x_coord;
-}
+// // Define event for ABI messaging
+// static abi_event direction_ev;
+// // Callback function for ABI messaging
+// static void direction_cb(uint16_t x_coord){
+// 	x_clear = x_coord;
+// }
 
 struct image_t *get_image(struct image_t *img);
 struct image_t *get_image(struct image_t *img)
@@ -99,48 +99,48 @@ cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_a
 void mavcourse_team8_periodic(void)
 {
 
-	switch (navigation_state){
-		case FOLLOWING:
+	// switch (navigation_state){
+	// 	case FOLLOWING:
 
-			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;
-			guidance_h_set_guided_heading_rate(heading_rate);
-			VERBOSE_PRINT("Heading rate: %f \n", heading_rate);
-			float speed_setting = ((float)x_clear-(float)x_max/2) * speed_gain;
-			guidance_h_set_guided_body_vel(speed_setting,0);
+	// 		float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;
+	// 		guidance_h_set_guided_heading_rate(heading_rate);
+	// 		VERBOSE_PRINT("Heading rate: %f \n", heading_rate);
+	// 		float speed_setting = ((float)x_clear-(float)x_max/2) * speed_gain;
+	// 		guidance_h_set_guided_body_vel(speed_setting,0);
 
-			if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
-						        navigation_state = OUT_OF_BOUNDS;
+	// 		if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
+	// 					        navigation_state = OUT_OF_BOUNDS;
 
-			break;
+	// 		break;
 
-		//case SEARCH_FOR_NEW_HEADING:
+	// 	//case SEARCH_FOR_NEW_HEADING:
 
 
-			//break;
+	// 		//break;
 
-		case OUT_OF_BOUNDS:
-			// stop
-		    guidance_h_set_guided_body_vel(0, -1);
+	// 	case OUT_OF_BOUNDS:
+	// 		// stop
+	// 	    guidance_h_set_guided_body_vel(0, -1);
 
-		    // start turn back into arena
-		    guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));
+	// 	    // start turn back into arena
+	// 	    guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));
 
-		    navigation_state = REENTER_ARENA;
+	// 	    navigation_state = REENTER_ARENA;
 
-			break;
+	// 		break;
 
-		case REENTER_ARENA:
-		      // force floor center to opposite side of turn to head back into arena
-		      if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
-		        // return to heading mode
-		        guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
+	// 	case REENTER_ARENA:
+	// 	      // force floor center to opposite side of turn to head back into arena
+	// 	      if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
+	// 	        // return to heading mode
+	// 	        guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
 
-		        // reset safe counter
-		        obstacle_free_confidence = 0;
+	// 	        // reset safe counter
+	// 	        obstacle_free_confidence = 0;
 
-		        // ensure direction is safe before continuing
-		        navigation_state = FOLLOWING;
-		      }
-	}
+	// 	        // ensure direction is safe before continuing
+	// 	        navigation_state = FOLLOWING;
+	// 	      }
+	// }
 //printf("TEST periodic \n");
 }
