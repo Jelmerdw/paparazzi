@@ -35,12 +35,12 @@
 
 // #define MAVCOURSE_TEAM8_VERBOSE TRUE
 
-// #define PRINT(string,...) fprintf(stderr, "[MAVcourse team 8->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
-// #if MAVCOURSE_TEAM8_VERBOSE
-// #define VERBOSE_PRINT PRINT
-// #else
-// #define VERBOSE_PRINT(...)
-// #endif
+#define PRINT(string,...) fprintf(stderr, "[MAVcourse team 8->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
+#if MAVCOURSE_TEAM8_VERBOSE
+#define VERBOSE_PRINT PRINT
+#else
+#define VERBOSE_PRINT(...)
+#endif
 
 //Define FPS:
 #ifndef FPS
@@ -49,25 +49,29 @@
 PRINT_CONFIG_VAR(FPS)
 
 // // Setting possible states
-// enum navigation_state_t {
-// 	FOLLOWING,
-// 	OUT_OF_BOUNDS,
-// 	REENTER_ARENA
-// };
+enum navigation_state_t {
+ 	FOLLOWING,
+	FIND_NEW_HEADING,
+	OUT_OF_BOUNDS,
+	REENTER_ARENA
+};
 
-// enum navigation_state_t navigation_state = FIND_NEW_HEADING;
+enum navigation_state_t navigation_state = FIND_NEW_HEADING;
 
-// uint16_t x_clear = 0;
-// uint16_t x_max = FRAME_WIDTH;
-// float heading_gain =0.0;
-// float speed_gain = 0.0;
+uint16_t x_clear = 0;
+uint16_t x_max = FRAME_WIDTH;
+
+// Initiate setting variables
+float heading_gain = 1.0f;
+float speed_gain = 1.0f;
+int acceptance_width = 20;
 
 
-// // Define event for ABI messaging
-// static abi_event direction_ev;
-// // Callback function for ABI messaging
-// static void direction_cb(uint16_t x_coord){
-// 	x_clear = x_coord;
+// Define event for ABI messaging
+static abi_event direction_ev;
+// Callback function for ABI messaging
+static void direction_cb(uint16_t x_coord){
+	x_clear = x_coord;
 // }
 
 struct image_t *get_image(struct image_t *img);
@@ -79,68 +83,81 @@ struct image_t *get_image(struct image_t *img)
   return img;
 }
 
+// Copied this part of the code to use the same method as orange avoider guided to stay in arena
+#ifndef FLOOR_VISUAL_DETECTION_ID
+#error This module requires two color filters, as such you have to define FLOOR_VISUAL_DETECTION_ID to the orange filter
+#error Please define FLOOR_VISUAL_DETECTION_ID to be COLOR_OBJECT_DETECTION1_ID or COLOR_OBJECT_DETECTION2_ID in your airframe
+#endif
+static abi_event floor_detection_ev;
+static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
+                               int16_t __attribute__((unused)) pixel_x, int16_t pixel_y,
+                               int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
+                               int32_t quality, int16_t __attribute__((unused)) extra)
+{
+  floor_count = quality;
+  floor_centroid = pixel_y;
+}
+
 
 /*
  * Initialisation function
  */
 void mavcourse_team8_init(void)
 {
-cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
+	cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
+	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
+	AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
+
+	// ABI message for floor detection (copied from orange avoider guided)
+	AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
 }
-
-// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
-//AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
-
-
 
 /*
  * Function that checks it is safe to move forwards, and then sets a forward velocity setpoint or changes the heading
  */
 void mavcourse_team8_periodic(void)
 {
+	  int32_t floor_count_threshold = oag_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
+	  float floor_centroid_frac = floor_centroid / (float)front_camera.output_size.h / 2.f;
 
-	// switch (navigation_state){
-	// 	case FOLLOWING:
+	switch (navigation_state){
+		case FIND_NEW_HEADING:
+			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
+			guidance_h_set_guided_heading_rate(heading_rate);
+			if((x_clear-x_max/2)*(x_clear-x_max/2) < acceptance_width){
 
-	// 		float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;
-	// 		guidance_h_set_guided_heading_rate(heading_rate);
-	// 		VERBOSE_PRINT("Heading rate: %f \n", heading_rate);
-	// 		float speed_setting = ((float)x_clear-(float)x_max/2) * speed_gain;
-	// 		guidance_h_set_guided_body_vel(speed_setting,0);
+			}
+			break;
 
-	// 		if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
-	// 					        navigation_state = OUT_OF_BOUNDS;
+		case FOLLOWING:
+			float heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
+			guidance_h_set_guided_heading_rate(heading_rate);
+			VERBOSE_PRINT("Heading rate: %f \n", heading_rate);
 
-	// 		break;
+			float speed_setting = (1.f/(float)x_clear-(float)x_max) * speed_gain; //Inverse relation to speed and centeredness of dot
+			guidance_h_set_guided_body_vel(speed_setting,0);
+			VERBOSE_PRINT("Speed: %f\n", speed_setting);
 
-	// 	//case SEARCH_FOR_NEW_HEADING:
+			if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
+			        navigation_state = OUT_OF_BOUNDS;
+			      }
 
+			break;
 
-	// 		//break;
+		case OUT_OF_BOUNDS: // Entire state copied from orange avoider guided
+		    guidance_h_set_guided_body_vel(0, 0);
+	 	    guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));
+	 	    navigation_state = REENTER_ARENA;
 
-	// 	case OUT_OF_BOUNDS:
-	// 		// stop
-	// 	    guidance_h_set_guided_body_vel(0, -1);
+	 		break;
 
-	// 	    // start turn back into arena
-	// 	    guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));
-
-	// 	    navigation_state = REENTER_ARENA;
-
-	// 		break;
-
-	// 	case REENTER_ARENA:
-	// 	      // force floor center to opposite side of turn to head back into arena
-	// 	      if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
-	// 	        // return to heading mode
-	// 	        guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
-
-	// 	        // reset safe counter
-	// 	        obstacle_free_confidence = 0;
-
-	// 	        // ensure direction is safe before continuing
-	// 	        navigation_state = FOLLOWING;
-	// 	      }
-	// }
-//printf("TEST periodic \n");
+		case REENTER_ARENA: // Entire state copied from orange avoider guided
+			if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
+			 guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
+	 	     navigation_state = FOLLOWING;
+	 	      }
+	 	    break;
+ 	      }
+	}
+	return;
 }
