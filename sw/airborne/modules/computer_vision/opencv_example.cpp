@@ -37,6 +37,8 @@ using namespace cv;
 
 int opencv_example(char *img, int width, int height)
 {
+  printf("open_cv function is included succesfully!", time);
+  
   // Create a new image, using the original bebop image.
   Mat M(height, width, CV_8UC2, img);
   Mat image;

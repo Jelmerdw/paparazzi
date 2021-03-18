@@ -33,6 +33,11 @@
 #include <stdio.h>
 #include <time.h>
 
+//Includes voor open_cv:
+#include "modules/computer_vision/cv.h"
+#include "modules/computer_vision/cv_opencvdemo.h"
+#include "modules/computer_vision/opencv_example.h"
+
 // #define MAVCOURSE_TEAM8_VERBOSE TRUE
 
 #define PRINT(string,...) fprintf(stderr, "[MAVcourse team 8->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
@@ -80,6 +85,7 @@ struct image_t *get_image(struct image_t *img)
   auto time = img->pprz_ts;
   printf("%d", time);
   printf("\n");
+	opencv_example((char *) img->buf, img->w, img->h);
   return img;
 }
 
