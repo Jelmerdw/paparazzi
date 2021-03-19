@@ -204,8 +204,9 @@
       <field name="throttle"  type="int16_t">Throttle input in pprz_t [0;9600] or [-9600;9600] (for vertical speed control for instance)</field>
     </message>
     
-    <message name="VED_ID" id="88">
+    <message name="TARGET_COORDINATE_TEAM_8" id="88">
     	<field name="x_coord" type="uint16_t">X coordinate of the flying direction</field>
+    	<field name="y_coord" type="uint16_t">Y coordinate of the flying direction</field>
     </message>
   </msg_class>
 

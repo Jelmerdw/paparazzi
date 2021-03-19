@@ -27,6 +27,7 @@
 #define CV_OPENCVDEMO_H
 
 extern void opencvdemo_init(void);
+extern void opencvdemo_periodic(void);
 
 #endif
 

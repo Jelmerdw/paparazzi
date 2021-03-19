@@ -28,6 +28,11 @@
 #ifndef ABI_SENDER_IDS_H
 #define ABI_SENDER_IDS_H
 
+/** Custom ID team 8 for communicating x & y coordinate (message 88) */
+#ifndef TARGET_COORDINATE_TEAM_8_ID 
+#define TARGET_COORDINATE_TEAM_8_ID 1
+#endif
+
 /** default onboard baro */
 #ifndef BARO_BOARD_SENDER_ID
 #define BARO_BOARD_SENDER_ID 1
