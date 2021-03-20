@@ -23,10 +23,16 @@
  * A simple module showing what you can do with opencv on the bebop.
  */
 
-#include "modules/computer_vision/cv.h"
 #include "modules/computer_vision/cv_opencvdemo.h"
 #include "modules/computer_vision/opencv_example.h"
+#include "modules/computer_vision/cv.h"
 #include "subsystems/abi.h"
+#include "std.h"
+
+#include <stdio.h>
+#include <stdbool.h>
+#include <math.h>
+#include "pthread.h"
 
 #ifndef OPENCVDEMO_FPS
 #define OPENCVDEMO_FPS 0       ///< Default FPS (zero means run at camera fps)
@@ -40,8 +46,8 @@ static pthread_mutex_t mutex;
 
 //Structure that will be communicated using abi
 struct coordinate_message{
-  float x_c;
-  float y_c;
+  uint16_t x_c;
+  uint16_t y_c;
   bool updated;
 };
 
@@ -93,7 +99,9 @@ void opencvdemo_periodic(void)
   //Update ABI MSG
   if(local_coordinate_message[0].updated){
     printf("%.3f", local_coordinate_message[0].x_c);
+
     AbiSendMsgTARGET_COORDINATE_TEAM_8(TARGET_COORDINATE_TEAM_8_ID, local_coordinate_message[0].x_c, local_coordinate_message[0].y_c);
+
     local_coordinate_message[0].updated = false;
   }
 

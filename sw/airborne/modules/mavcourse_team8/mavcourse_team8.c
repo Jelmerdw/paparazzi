@@ -82,7 +82,9 @@ float oag_floor_count_frac = 0.18f;
 // Define event for ABI messaging
 static abi_event direction_ev;
 // Callback function for ABI messaging
-static void direction_cb(uint16_t x_coord){
+static void direction_cb(uint16_t x_coord,
+						 uint16_t __attribute__((unused)) y_coord)
+{
 	x_clear = x_coord;
  }
 
@@ -119,11 +121,10 @@ static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
 void mavcourse_team8_init(void)
 {
 	cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
-	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
-	//AbiBindMsgVERTICAL_EDGE_DETECTION(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
-
 	// ABI message for floor detection (copied from orange avoider guided)
 	AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
+	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
+	AbiBindMsgTARGET_COORDINATE_TEAM_8(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
 }
 
 /*
