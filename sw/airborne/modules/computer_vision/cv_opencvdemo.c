@@ -98,7 +98,6 @@ void opencvdemo_periodic(void)
 
   //Update ABI MSG
   if(local_coordinate_message[0].updated){
-    printf("%.3f", local_coordinate_message[0].x_c);
 
     AbiSendMsgTARGET_COORDINATE_TEAM_8(TARGET_COORDINATE_TEAM_8_ID, local_coordinate_message[0].x_c, local_coordinate_message[0].y_c);
 

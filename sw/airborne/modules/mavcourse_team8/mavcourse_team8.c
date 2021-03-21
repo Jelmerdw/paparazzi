@@ -82,11 +82,13 @@ float oag_floor_count_frac = 0.18f;
 // Define event for ABI messaging
 static abi_event direction_ev;
 // Callback function for ABI messaging
-static void direction_cb(uint16_t x_coord,
-						 uint16_t __attribute__((unused)) y_coord)
+static void direction_cb(
+						uint8_t __attribute__((unused)) sender_id,
+						uint16_t x_coord,
+						uint16_t y_coord)
 {
 	x_clear = x_coord;
- }
+}
 
 
 struct image_t *get_image(struct image_t *img);
