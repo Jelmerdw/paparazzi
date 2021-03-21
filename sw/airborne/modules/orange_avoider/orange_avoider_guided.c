@@ -65,6 +65,8 @@ int32_t floor_count = 0;                // green color count from color filter f
 int32_t floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
 float avoidance_heading_direction = 0;  // heading change direction for avoidance [rad/s]
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead if safe.
+float heading_rate = 0;
+
 
 const int16_t max_trajectory_confidence = 5;  // number of consecutive negative object detections to be sure we are obstacle free
 
@@ -165,7 +167,9 @@ void orange_avoider_guided_periodic(void)
 
       break;
     case SEARCH_FOR_SAFE_HEADING:
-      guidance_h_set_guided_heading_rate(avoidance_heading_direction * oag_heading_rate);
+      heading_rate = avoidance_heading_direction * oag_heading_rate;
+      guidance_h_set_guided_heading_rate(heading_rate);
+      printf("Heading rate: %f \n", heading_rate);
 
       // make sure we have a couple of good readings before declaring the way safe
       if (obstacle_free_confidence >= 2){
@@ -175,7 +179,7 @@ void orange_avoider_guided_periodic(void)
       break;
     case OUT_OF_BOUNDS:
       // stop
-      guidance_h_set_guided_body_vel(0, -1);
+      guidance_h_set_guided_body_vel(0, 0);
 
       // start turn back into arena
       guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));

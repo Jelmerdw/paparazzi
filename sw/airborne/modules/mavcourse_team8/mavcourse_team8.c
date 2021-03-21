@@ -27,11 +27,15 @@
 
 #include "modules/mavcourse_team8/mavcourse_team8.h"
 #include "firmwares/rotorcraft/guidance/guidance_h.h"
+#include "firmwares/rotorcraft/navigation.h"
 #include "generated/airframe.h"
 #include "state.h"
 #include "subsystems/abi.h"
 #include <stdio.h>
 #include <time.h>
+
+#define NAV_C // needed to get the nav functions like Inside...
+#include "generated/flight_plan.h"
 
 //Includes voor open_cv:
 #include "modules/computer_vision/cv.h"
@@ -53,31 +57,84 @@
 #endif
 PRINT_CONFIG_VAR(FPS)
 
+// Initiate setting variables SET INITIAL VALUES HERE!!!!!
+float heading_gain = 0.6f;
+float speed_gain = 1.0f;
+int acceptance_width = 20;
+//int x_clear = 0;
+float heading_increment = 15.f;
+float maxDistance = 2.f;
+
+/*
+ * Increases the NAV heading. Assumes heading is an INT32_ANGLE. It is bound in this function.
+ */
+uint8_t increase_nav_heading(float incrementDegrees)
+{
+  float new_heading = stateGetNedToBodyEulers_f()->psi + RadOfDeg(incrementDegrees);
+
+  // normalize heading to [-pi, pi]
+  FLOAT_ANGLE_NORMALIZE(new_heading);
+
+  // set heading, declared in firmwares/rotorcraft/navigation.h
+  // for performance reasons the navigation variables are stored and processed in Binary Fixed-Point format
+  nav_heading = ANGLE_BFP_OF_REAL(new_heading);
+
+  VERBOSE_PRINT("Increasing heading to %f\n", DegOfRad(new_heading));
+  return false;
+}
+
+/*
+ * Calculates coordinates of a distance of 'distanceMeters' forward w.r.t. current position and heading
+ */
+uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters)
+{
+  float heading  = stateGetNedToBodyEulers_f()->psi;
+
+  // Now determine where to place the waypoint you want to go to
+  new_coor->x = stateGetPositionEnu_i()->x + POS_BFP_OF_REAL(sinf(heading) * (distanceMeters));
+  new_coor->y = stateGetPositionEnu_i()->y + POS_BFP_OF_REAL(cosf(heading) * (distanceMeters));
+  VERBOSE_PRINT("Calculated %f m forward position. x: %f  y: %f based on pos(%f, %f) and heading(%f)\n", distanceMeters,
+                POS_FLOAT_OF_BFP(new_coor->x), POS_FLOAT_OF_BFP(new_coor->y),
+                stateGetPositionEnu_f()->x, stateGetPositionEnu_f()->y, DegOfRad(heading));
+  return false;
+}
+
+uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
+{
+  printf("Moving waypoint %d to x:%f y:%f\n", waypoint, POS_FLOAT_OF_BFP(new_coor->x),
+                POS_FLOAT_OF_BFP(new_coor->y));
+  waypoint_move_xy_i(waypoint, new_coor->x, new_coor->y);
+  return false;
+}
+
+/*
+ * Calculates coordinates of distance forward and sets waypoint 'waypoint' to those coordinates
+ */
+uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters)
+{
+  struct EnuCoor_i new_coor;
+  calculateForwards(&new_coor, distanceMeters);
+  moveWaypoint(waypoint, &new_coor);
+  return false;
+}
+
 // // Setting possible states
 enum navigation_state_t {
- 	FOLLOWING,
 	FIND_NEW_HEADING,
-	OUT_OF_BOUNDS,
-	REENTER_ARENA
+ 	FOLLOWING,
+	OUT_OF_BOUNDS
 };
 
 enum navigation_state_t navigation_state = FIND_NEW_HEADING;
 
-uint16_t x_clear = 0;
+float speed_setting = 0.f;
+float heading_step = 0.f;
+float heading_rate = 0.f;
+int x_clear = 0;
 uint16_t x_max = FRAME_WIDTH;
 int32_t floor_count = 0;
 int32_t floor_centroid = 0;
-float avoidance_heading_direction = 0;
-
-// Initiate setting variables
-float heading_gain = 1.0f;
-float speed_gain = 1.0f;
-int acceptance_width = 20;
-int x_coord = 0;
-float heading_rate = 0.f;
-float speed_setting = 0.f;
-float oag_floor_count_frac = 0.18f;
-
+float avoidance_heading_direction = 1.f;
 
 // Define event for ABI messaging
 static abi_event direction_ev;
@@ -85,7 +142,7 @@ static abi_event direction_ev;
 static void direction_cb(uint16_t x_coord,
 						 uint16_t __attribute__((unused)) y_coord)
 {
-	x_clear = x_coord;
+	x_clear = (int)x_coord;
  }
 
 
@@ -97,22 +154,7 @@ struct image_t *get_image(struct image_t *img)
   //printf("\n");
 	opencv_example((char *) img->buf, img->w, img->h);
   return img;
-}
-
-// Copied this part of the code to use the same method as orange avoider guided to stay in arena
-#ifndef FLOOR_VISUAL_DETECTION_ID
-#error This module requires two color filters, as such you have to define FLOOR_VISUAL_DETECTION_ID to the orange filter
-#error Please define FLOOR_VISUAL_DETECTION_ID to be COLOR_OBJECT_DETECTION1_ID or COLOR_OBJECT_DETECTION2_ID in your airframe
-#endif
-static abi_event floor_detection_ev;
-static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
-                               int16_t __attribute__((unused)) pixel_x, int16_t pixel_y,
-                               int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
-                               int32_t quality, int16_t __attribute__((unused)) extra)
-{
-  floor_count = quality;
-  floor_centroid = pixel_y;
-}
+};
 
 
 /*
@@ -121,8 +163,6 @@ static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
 void mavcourse_team8_init(void)
 {
 	cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
-	// ABI message for floor detection (copied from orange avoider guided)
-	AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
 	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
 	AbiBindMsgTARGET_COORDINATE_TEAM_8(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
 }
@@ -132,48 +172,64 @@ void mavcourse_team8_init(void)
  */
 void mavcourse_team8_periodic(void)
 {
-	printf("State: %d \n", navigation_state);
-	int32_t floor_count_threshold = oag_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
-	float floor_centroid_frac = floor_centroid / (float)front_camera.output_size.h / 2.f;
+	if(!autopilot_in_flight()){
+		return;
+	}
+
+	printf("State: %c \n", navigation_state);
+	printf("ABI: X clear %i \n", x_clear);
 
 	switch (navigation_state){
 		case FIND_NEW_HEADING:
-			heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
-			guidance_h_set_guided_heading_rate(heading_rate);
-			printf("Heading rate: %f \n", heading_rate);
-			if((x_clear-x_max/2)*(x_clear-x_max/2) < acceptance_width){
+
+			increase_nav_heading(heading_increment);
+			if(abs(x_clear-x_max/2) < acceptance_width){
 				navigation_state = FOLLOWING;
 			}
+
 			break;
 
 		case FOLLOWING:
-			heading_rate = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
-			guidance_h_set_guided_heading_rate(heading_rate);
-			printf("Heading rate: %f \n", heading_rate);
 
-			speed_setting = (1.f/(float)x_clear-(float)x_max) * speed_gain; //Inverse relation to speed and centeredness of dot
-			guidance_h_set_guided_body_vel(speed_setting,0);
-			printf("Speed: %f \n", speed_setting);
+			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
+			printf("Heading step: %f \n", heading_step);
 
-			if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
-			        navigation_state = OUT_OF_BOUNDS;
-			      }
+			speed_setting = (abs((acceptance_width/2) - abs((float)x_clear-(float)x_max/2))) * speed_gain; //Inverse relation to speed and centeredness of dot
+			printf("Speed setting: %f \n", speed_setting);
+
+			float moveDistance = fminf(maxDistance, speed_setting);
+			increase_nav_heading(heading_step); // first increase nav heading, then move waypoint forward
+
+		    moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+
+
+		    if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+		        navigation_state = OUT_OF_BOUNDS;
+		      }
+			else if (abs(x_clear-x_max/2) >= acceptance_width){
+				navigation_state = FIND_NEW_HEADING;
+			}
+			else {
+			    moveWaypointForward(WP_GOAL, moveDistance);
+			}
 
 			break;
 
-		case OUT_OF_BOUNDS: // Entire state copied from orange avoider guided
-		    guidance_h_set_guided_body_vel(0, 0);
-	 	    guidance_h_set_guided_heading_rate(avoidance_heading_direction * RadOfDeg(15));
-	 	    navigation_state = REENTER_ARENA;
+		case OUT_OF_BOUNDS: // Entire state copied from orange avoider
+		    increase_nav_heading(heading_increment);
+		    moveWaypointForward(WP_TRAJECTORY, 1.5f);
+
+		    if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+		        // add offset to head back into arena
+		    	increase_nav_heading(heading_increment);
+		        navigation_state = FIND_NEW_HEADING;
+		      }
 
 	 		break;
 
-		case REENTER_ARENA: // Entire state copied from orange avoider guided
-			if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
-			 guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi);
-	 	     navigation_state = FOLLOWING;
-	 	      }
-	 	    break;
+		default:
+			navigation_state = FIND_NEW_HEADING;
+			break;
  	      }
 	return;
 }
