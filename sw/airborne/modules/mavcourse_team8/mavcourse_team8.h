@@ -32,8 +32,7 @@
 extern float heading_gain;
 extern float speed_gain;
 extern int acceptance_width;
-// extern int x_clear = 0;
-extern float heading_increment;
+extern float heading_gain_idle;
 extern float maxDistance;
 
 extern void mavcourse_team8_init(void);

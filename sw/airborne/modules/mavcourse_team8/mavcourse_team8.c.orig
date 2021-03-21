@@ -59,7 +59,6 @@ PRINT_CONFIG_VAR(FPS)
 
 // Initiate setting variables SET INITIAL VALUES HERE!!!!!
 float heading_gain = 0.6f;
-float heading_gain_idle = 0.3f;
 float speed_gain = 1.0f;
 int acceptance_width = 20;
 //int x_clear = 0;
@@ -132,7 +131,7 @@ float speed_setting = 0.f;
 float heading_step = 0.f;
 float heading_rate = 0.f;
 int x_clear = 0;
-uint16_t x_max = 240;
+uint16_t x_max = FRAME_WIDTH;
 int32_t floor_count = 0;
 int32_t floor_centroid = 0;
 float avoidance_heading_direction = 1.f;
@@ -143,19 +142,27 @@ static abi_event direction_ev;
 static void direction_cb(
 						uint8_t __attribute__((unused)) sender_id,
 						uint16_t x_coord,
-						uint16_t __attribute__((unused)) y_coord)
+						uint16_t y_coord)
 {
+<<<<<<< HEAD
 	x_clear = (int)x_coord;
  }
+=======
+	x_clear = x_coord;
+}
+>>>>>>> dcd942c99a61e6817287b0eaa233ddc10753c763
 
 
 struct image_t *get_image(struct image_t *img);
 struct image_t *get_image(struct image_t *img)
 {
   auto time = img->pprz_ts;
+  //printf("%d", time);
+  //printf("\n");
 	opencv_example((char *) img->buf, img->w, img->h);
   return img;
 };
+
 
 /*
  * Initialisation function
@@ -163,7 +170,6 @@ struct image_t *get_image(struct image_t *img)
 void mavcourse_team8_init(void)
 {
 	cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
-
 	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
 	AbiBindMsgTARGET_COORDINATE_TEAM_8(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
 }
@@ -177,25 +183,13 @@ void mavcourse_team8_periodic(void)
 		return;
 	}
 
-	if(x_clear > x_max){
-		x_clear = 120;
-	}
-	int x_fromcenter = x_clear - x_max/2;
-	printf("State: %i \n", navigation_state);
+	printf("State: %c \n", navigation_state);
 	printf("ABI: X clear %i \n", x_clear);
-	printf("X from center: %i \n",x_fromcenter);
-
-	if(x_clear > x_max){
-		x_clear = 120;
-	}
 
 	switch (navigation_state){
 		case FIND_NEW_HEADING:
 
-			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain_idle;// Proportional relation to heading rate and centeredness of dot
-			printf("Heading step: %f \n", heading_step);
-			increase_nav_heading(heading_step);
-
+			increase_nav_heading(heading_increment);
 			if(abs(x_clear-x_max/2) < acceptance_width){
 				navigation_state = FOLLOWING;
 			}
@@ -204,16 +198,16 @@ void mavcourse_team8_periodic(void)
 
 		case FOLLOWING:
 
-			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain / 10.f;// Proportional relation to heading rate and centeredness of dot
+			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
 			printf("Heading step: %f \n", heading_step);
 
-			speed_setting = fmaxf((1 - abs((float)x_clear-(float)x_max/2)/(acceptance_width/2)),0) * speed_gain; //Inverse relation to speed and centeredness of dot
+			speed_setting = (abs((acceptance_width/2) - abs((float)x_clear-(float)x_max/2))) * speed_gain; //Inverse relation to speed and centeredness of dot
 			printf("Speed setting: %f \n", speed_setting);
 
 			float moveDistance = fminf(maxDistance, speed_setting);
 			increase_nav_heading(heading_step); // first increase nav heading, then move waypoint forward
 
-		    moveWaypointForward(WP_TRAJECTORY, 1.2f * moveDistance);
+		    moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
 
 
 		    if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
@@ -223,7 +217,6 @@ void mavcourse_team8_periodic(void)
 				navigation_state = FIND_NEW_HEADING;
 			}
 			else {
-				printf("Move distance: %f m \n",moveDistance);
 			    moveWaypointForward(WP_GOAL, moveDistance);
 			}
 
@@ -236,7 +229,7 @@ void mavcourse_team8_periodic(void)
 		    if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
 		        // add offset to head back into arena
 		    	increase_nav_heading(heading_increment);
-		        navigation_state = FOLLOWING;
+		        navigation_state = FIND_NEW_HEADING;
 		      }
 
 	 		break;
