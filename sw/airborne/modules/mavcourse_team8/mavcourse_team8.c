@@ -139,8 +139,10 @@ float avoidance_heading_direction = 1.f;
 // Define event for ABI messaging
 static abi_event direction_ev;
 // Callback function for ABI messaging
-static void direction_cb(uint16_t x_coord,
-						 uint16_t __attribute__((unused)) y_coord)
+static void direction_cb(
+						uint8_t __attribute__((unused)) sender_id,
+						uint16_t x_coord,
+						uint16_t y_coord)
 {
 	x_clear = (int)x_coord;
  }
@@ -163,6 +165,7 @@ struct image_t *get_image(struct image_t *img)
 void mavcourse_team8_init(void)
 {
 	cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
+
 	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
 	AbiBindMsgTARGET_COORDINATE_TEAM_8(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
 }
@@ -190,6 +193,7 @@ void mavcourse_team8_periodic(void)
 			break;
 
 		case FOLLOWING:
+
 
 			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain;// Proportional relation to heading rate and centeredness of dot
 			printf("Heading step: %f \n", heading_step);
