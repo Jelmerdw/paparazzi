@@ -32,6 +32,7 @@
 #include "state.h"
 #include "subsystems/abi.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #define NAV_C // needed to get the nav functions like Inside...
@@ -65,6 +66,9 @@ int acceptance_width = 20;
 //int x_clear = 0;
 float heading_increment = 30.f;
 float maxDistance = 2.f;
+
+//FILE for debugging:
+FILE *fptr;
 
 /*
  * Increases the NAV heading. Assumes heading is an INT32_ANGLE. It is bound in this function.
@@ -164,6 +168,7 @@ struct image_t *get_image(struct image_t *img)
  */
 void mavcourse_team8_init(void)
 {
+
 	cv_add_to_device(&CAMERA, get_image, FPS); //CAMERA defined in mavcourse_team8_airframe.xml
 
 	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
@@ -175,6 +180,11 @@ void mavcourse_team8_init(void)
  */
 void mavcourse_team8_periodic(void)
 {
+	//Save target to use for debugging:
+	fptr = fopen("data.txt","w");
+	fprintf(fptr,"%d", x_clear);
+	fclose(fptr);
+
 	if(!autopilot_in_flight()){
 		return;
 	}
