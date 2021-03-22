@@ -63,7 +63,7 @@ float heading_gain_idle = 0.3f;
 float speed_gain = 1.0f;
 int acceptance_width = 20;
 //int x_clear = 0;
-float heading_increment = 15.f;
+float heading_increment = 30.f;
 float maxDistance = 2.f;
 
 /*
@@ -145,7 +145,9 @@ static void direction_cb(
 						uint16_t x_coord,
 						uint16_t __attribute__((unused)) y_coord)
 {
-	x_clear = (int)x_coord;
+	x_clear = x_coord;
+	printf("TARGET = ");
+	printf("%d \n", x_clear);
  }
 
 
