@@ -61,10 +61,10 @@ PRINT_CONFIG_VAR(FPS)
 // Initiate setting variables SET INITIAL VALUES HERE!!!!!
 float heading_gain = 1.17f; //Old values: 0.6f
 float heading_gain_idle = 0.3f; //Old values: 0.3f
-float speed_gain = 1.91f; //Old values: 1.0f
-int acceptance_width = 20; //Old values: 20
+float speed_gain = 1.35f; //Old values: 1.91f
+int acceptance_width = 12; //Old values: 20
 //int x_clear = 0;
-float heading_increment = 30.f; //Old values: 30.f
+float heading_increment = 20.f; //Old values: 30.f
 float maxDistance = 2.f; //Old values: 2.f
 
 //FILE for debugging:
@@ -150,8 +150,6 @@ static void direction_cb(
 						uint16_t __attribute__((unused)) y_coord)
 {
 	x_clear = x_coord;
-	printf("TARGET = ");
-	printf("%d \n", x_clear);
  }
 
 
@@ -186,55 +184,62 @@ void mavcourse_team8_periodic(void)
 	fprintf(fptr,"%d", x_clear);
 	fclose(fptr);
 
+	// only evaluate our state machine if we are flying
 	if(!autopilot_in_flight()){
 		return;
 	}
 
+	// In case of overflow error (observed) in x, detect and set to middle value of 120.
 	if(x_clear > x_max){
 		x_clear = 120;
 	}
+
 	int x_fromcenter = x_clear - x_max/2;
 	printf("State: %i \n", navigation_state);
 	printf("ABI: X clear %i \n", x_clear);
 	printf("X from center: %i \n",x_fromcenter);
 
-	if(x_clear > x_max){
-		x_clear = 120;
-	}
-
 	switch (navigation_state){
 		case FIND_NEW_HEADING:
 
-			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain_idle;// Proportional relation to heading rate and centeredness of dot
-			printf("Heading step: %f \n", heading_step);
-			increase_nav_heading(heading_step);
+			// Proportional relation to heading step and centeredness of dot (yawing towards dot)
+			// heading_step = ((float)x_clear-(float)x_max/2) * heading_gain_idle;
+			// printf("Heading step: %f \n", heading_step);
+			increase_nav_heading(heading_increment);
 
-			if(abs(x_clear-x_max/2) < acceptance_width){
+			moveWaypointForward(WP_TRAJECTORY, 1.5f);
+
+			// Only move to the following state when the dot is in the acceptance width AND the trajectory doesn't take drone out of the cyberzoo
+			if(abs(x_clear-x_max/2) < acceptance_width && InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
 				navigation_state = FOLLOWING;
 			}
 
 			break;
 
 		case FOLLOWING:
-
-			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain / 10.f;// Proportional relation to heading rate and centeredness of dot
+			// Proportional relation to heading rate and centeredness of dot
+			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain / 10.f;
 			printf("Heading step: %f \n", heading_step);
 
-			speed_setting = fmaxf((1 - abs((float)x_clear-(float)x_max/2)/(acceptance_width/2)),0) * speed_gain; //Inverse relation to speed and centeredness of dot
+			//Inverse relation to speed and centeredness of dot
+			speed_setting = fmaxf((1 - abs((float)x_clear-(float)x_max/2)/(acceptance_width/2)),0) * speed_gain;
 			printf("Speed setting: %f \n", speed_setting);
 
+			// first increase nav heading, then move waypoint forward
 			float moveDistance = fminf(maxDistance, speed_setting);
 			increase_nav_heading(heading_step); // first increase nav heading, then move waypoint forward
 
-		    moveWaypointForward(WP_TRAJECTORY, 1.2f * moveDistance);
+		    moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
 
-
+		    // If dot outside acceptance width OR waypoint outside cyberzoo, move back to finding a new heading
 		    if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-		        navigation_state = OUT_OF_BOUNDS;
-		      }
-			else if (abs(x_clear-x_max/2) >= acceptance_width){
+		    	navigation_state = OUT_OF_BOUNDS;
+		    }
+
+		    else if (abs(x_clear-x_max/2) >= acceptance_width){
 				navigation_state = FIND_NEW_HEADING;
 			}
+			// Else move forward with speed (distance) proportional to 'confidence'
 			else {
 				printf("Move distance: %f m \n",moveDistance);
 			    moveWaypointForward(WP_GOAL, moveDistance);
@@ -242,17 +247,17 @@ void mavcourse_team8_periodic(void)
 
 			break;
 
-		case OUT_OF_BOUNDS: // Entire state copied from orange avoider
+		case OUT_OF_BOUNDS:
 		    increase_nav_heading(heading_increment);
 		    moveWaypointForward(WP_TRAJECTORY, 1.5f);
 
 		    if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
 		        // add offset to head back into arena
-		    	increase_nav_heading(heading_increment);
-		        navigation_state = FOLLOWING;
+		        navigation_state = FIND_NEW_HEADING;
 		      }
 
 	 		break;
+
 
 		default:
 			navigation_state = FIND_NEW_HEADING;
