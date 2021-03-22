@@ -46,8 +46,8 @@ static pthread_mutex_t mutex;
 
 //Structure that will be communicated using abi
 struct coordinate_message{
-  uint16_t x_c;
-  uint16_t y_c;
+  int16_t x_c;
+  int16_t y_c;
   bool updated;
 };
 

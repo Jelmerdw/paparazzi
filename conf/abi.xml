@@ -205,8 +205,8 @@
     </message>
     
     <message name="TARGET_COORDINATE_TEAM_8" id="88">
-    	<field name="x_coord" type="uint16_t">X coordinate of the flying direction</field>
-    	<field name="y_coord" type="uint16_t">Y coordinate of the flying direction</field>
+    	<field name="x_coord" type="int16_t">X coordinate of the flying direction</field>
+    	<field name="y_coord" type="int16_t">Y coordinate of the flying direction</field>
     </message>
   </msg_class>
 

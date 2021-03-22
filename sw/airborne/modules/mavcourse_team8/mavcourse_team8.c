@@ -59,12 +59,11 @@
 PRINT_CONFIG_VAR(FPS)
 
 // Initiate setting variables SET INITIAL VALUES HERE!!!!!
-float heading_gain = 1.17f; //Old values: 0.6f
-float heading_gain_idle = 0.3f; //Old values: 0.3f
+float heading_gain = 4.5f; //Old values: 1.17f
 float speed_gain = 1.35f; //Old values: 1.91f
 int acceptance_width = 12; //Old values: 20
 //int x_clear = 0;
-float heading_increment = 20.f; //Old values: 30.f
+float heading_increment = 10.f; //Old values: 30.f
 float maxDistance = 2.f; //Old values: 2.f
 
 //FILE for debugging:
@@ -146,8 +145,8 @@ static abi_event direction_ev;
 // Callback function for ABI messaging
 static void direction_cb(
 						uint8_t __attribute__((unused)) sender_id,
-						uint16_t x_coord,
-						uint16_t __attribute__((unused)) y_coord)
+						int16_t x_coord,
+						int16_t __attribute__((unused)) y_coord)
 {
 	x_clear = x_coord;
  }
@@ -190,7 +189,7 @@ void mavcourse_team8_periodic(void)
 	}
 
 	// In case of overflow error (observed) in x, detect and set to middle value of 120.
-	if(x_clear > x_max){
+	if(x_clear > x_max || x_clear < -30){
 		x_clear = 120;
 	}
 
@@ -219,6 +218,8 @@ void mavcourse_team8_periodic(void)
 		case FOLLOWING:
 			// Proportional relation to heading rate and centeredness of dot
 			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain / 10.f;
+			heading_step = fminf(heading_step,25.f);
+
 			printf("Heading step: %f \n", heading_step);
 
 			//Inverse relation to speed and centeredness of dot
