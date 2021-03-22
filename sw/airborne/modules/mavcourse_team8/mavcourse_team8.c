@@ -59,13 +59,13 @@
 PRINT_CONFIG_VAR(FPS)
 
 // Initiate setting variables SET INITIAL VALUES HERE!!!!!
-float heading_gain = 0.6f;
-float heading_gain_idle = 0.3f;
-float speed_gain = 1.0f;
-int acceptance_width = 20;
+float heading_gain = 1.17f; //Old values: 0.6f
+float heading_gain_idle = 0.3f; //Old values: 0.3f
+float speed_gain = 1.91f; //Old values: 1.0f
+int acceptance_width = 20; //Old values: 20
 //int x_clear = 0;
-float heading_increment = 30.f;
-float maxDistance = 2.f;
+float heading_increment = 30.f; //Old values: 30.f
+float maxDistance = 2.f; //Old values: 2.f
 
 //FILE for debugging:
 FILE *fptr;
@@ -159,8 +159,9 @@ struct image_t *get_image(struct image_t *img);
 struct image_t *get_image(struct image_t *img)
 {
   auto time = img->pprz_ts;
+	// Call OpenCV (C++ from paparazzi C function)
 	opencv_example((char *) img->buf, img->w, img->h);
-  return img;
+  return img; // Return modified image for further processing
 };
 
 /*
