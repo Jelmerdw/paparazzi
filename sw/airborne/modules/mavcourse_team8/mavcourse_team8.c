@@ -61,7 +61,7 @@ PRINT_CONFIG_VAR(FPS)
 // Initiate setting variables SET INITIAL VALUES HERE!!!!!
 float heading_gain = 4.5f; //Old values: 1.17f
 float speed_gain = 1.35f; //Old values: 1.91f
-int acceptance_width = 12; //Old values: 20
+float acceptance_width_percent = 0.2; //Old values: 20
 //int x_clear = 0;
 float heading_increment = 10.f; //Old values: 30.f
 float maxDistance = 2.f; //Old values: 2.f
@@ -136,10 +136,11 @@ float speed_setting = 0.f;
 float heading_step = 0.f;
 float heading_rate = 0.f;
 int x_clear = 0;
-uint16_t x_max = 240;
+uint16_t x_max = 520;
 int32_t floor_count = 0;
 int32_t floor_centroid = 0;
 float avoidance_heading_direction = 1.f;
+int acceptance_width;
 
 // Define event for ABI messaging
 static abi_event direction_ev;
@@ -150,6 +151,7 @@ static void direction_cb(
 						int16_t __attribute__((unused)) y_coord)
 {
 	x_clear = x_coord;
+	printf("X clear (direct ABI): %i \n",x_clear);
  }
 
 
@@ -193,14 +195,15 @@ void mavcourse_team8_periodic(void)
 	}
 
 	// In case of overflow error (observed) in x, detect and set to middle value of 120.
-	if(x_clear > x_max || x_clear < -30){
-		x_clear = 120;
+	if(x_clear > x_max || x_clear < -1){
+		x_clear = 240;
 	}
+	acceptance_width = acceptance_width_percent * x_max;
 
 	int x_fromcenter = x_clear - x_max/2;
-	printf("State: %i \n", navigation_state);
-	printf("ABI: X clear %i \n", x_clear);
+	printf("X clear (after if): %i \n", x_clear);
 	printf("X from center: %i \n",x_fromcenter);
+	printf("State: %i \n", navigation_state);
 
 	switch (navigation_state){
 		case FIND_NEW_HEADING:
@@ -262,6 +265,10 @@ void mavcourse_team8_periodic(void)
 		      }
 
 	 		break;
+	 	/*
+		case STUCK:
+			moveWaypointForward(WP_GOAL,-1.f);
+			increase_nav_heading(heading_increment); */
 
 
 		default:
