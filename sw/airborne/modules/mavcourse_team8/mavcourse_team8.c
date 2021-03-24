@@ -66,7 +66,8 @@ int acceptance_width = 12; //Old values: 20
 float heading_increment = 10.f; //Old values: 30.f
 float maxDistance = 2.f; //Old values: 2.f
 
-//FILE for debugging:
+//For debugging with python:
+int debugging = 0; //set to 1 to activate debugging
 FILE *fptr;
 
 /*
@@ -179,9 +180,12 @@ void mavcourse_team8_init(void)
 void mavcourse_team8_periodic(void)
 {
 	//Save target to use for debugging:
-	fptr = fopen("data.txt","w");
-	fprintf(fptr,"%d", x_clear);
-	fclose(fptr);
+	if (debugging == 1)
+	{
+		fptr = fopen("data.txt","w");
+		fprintf(fptr,"%d", x_clear);
+		fclose(fptr);
+	}
 
 	// only evaluate our state machine if we are flying
 	if(!autopilot_in_flight()){
