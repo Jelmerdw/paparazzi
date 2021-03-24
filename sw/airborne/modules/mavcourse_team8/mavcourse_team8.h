@@ -31,7 +31,7 @@
 // settings
 extern float heading_gain;
 extern float speed_gain;
-extern int acceptance_width;
+extern float acceptance_width_percent;
 extern float heading_increment;
 extern float maxDistance;
 
