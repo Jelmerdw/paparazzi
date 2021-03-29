@@ -34,6 +34,10 @@
 #include <math.h>
 #include "pthread.h"
 
+//Clock:
+clock_t start, end;
+double cpu_time_used;
+
 #ifndef OPENCVDEMO_FPS
 #define OPENCVDEMO_FPS 0       ///< Default FPS (zero means run at camera fps)
 #endif
@@ -102,6 +106,12 @@ void opencvdemo_periodic(void)
     AbiSendMsgTARGET_COORDINATE_TEAM_8(TARGET_COORDINATE_TEAM_8_ID, local_coordinate_message[0].x_c, local_coordinate_message[0].y_c);
 
     local_coordinate_message[0].updated = false;
+
+    //Clock:
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Time taken %lf seconds\n", cpu_time_used);
+    start = clock();
   }
 
 }

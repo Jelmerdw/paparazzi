@@ -281,7 +281,7 @@ void mavcourse_team8_periodic(void)
 
 		case OUT_OF_BOUNDS:
 			VERBOSE_PRINT("STATE: OUT OF BOUNDS \n");
-		    increase_nav_heading(heading_increment);
+		    increase_nav_heading(heading_increment*4);
 		    moveWaypointForward(WP_TRAJECTORY, 1.5f);
 
 		    if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){

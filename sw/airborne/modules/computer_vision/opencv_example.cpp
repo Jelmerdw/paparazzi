@@ -59,8 +59,14 @@ int opencv_example(char *img, int width, int height)
   Mat copy;
   Mat dilation;
 
-  // Grey out and rotate the images
+  //Grey out:
   cvtColor(M, image, CV_YUV2GRAY_Y422);
+
+  //Crop image (has to be rotated still so width = height and vice versa)
+  Rect myROI(width * 1 / 4, 0, width * 3 / 4, height);
+  image = image(myROI);
+
+  //Rotate the image:
   rotate(image, image, ROTATE_90_COUNTERCLOCKWISE);
 
   // Increase contrast (WEKRT NOG NIET:)
@@ -71,61 +77,47 @@ int opencv_example(char *img, int width, int height)
   int edgeHighTresh = 100;
   Canny(image, image, edgeLowTresh, edgeHighTresh);
 
-  //make borders white (NOT WORKING YET:)
-
-  //Include edges on the left side of the screen and make them white
-  // for (int i = 0; i < image.rows; i++)
-  // {
-  //   image.at<int>(0,i) = 255;
-  // }
-
-  // // // //Include edges of the right side of the screen and make them white
-  // for (int i = 0; i < image.rows; i++)
-  // {
-  //   image.at<int>(image.cols,i) = 255;
-  // }
-
-  // // // // //Include edges on the top side of the screen and make them white
-  // for (int i = 0; i < image.cols; i++)
-  // {
-  //   image.at<int>(i,0) = 255;
-  // }
-
-  // // // // //Include edges of the bottom side of the screen and make them white
-  // for (int i = 0; i < image.cols; i++)
-  // {
-  //   image.at<int>(i,image.rows) = 255;
-  // }
-
-  // Make a copy of img_edges
-  dilation = image;
+  //Extract vertical lines:
+  Mat element = getStructuringElement(MORPH_RECT, Size(1, 10));
+  morphologyEx(image, image, MORPH_OPEN, element);
 
   // ENTER THE WHILE LOOP ....
   // Within each frame, copy the image and dilate the edges until the penultimate step
   bool ended = false;
+  int ITT = 0;
   while (not ended)
   {
+    ITT = ITT + 1;
+
     //Define zeros before dilation:
-    findNonZero(~dilation, privZeros);
+    findNonZero(~image, privZeros);
+
+    //Determine white percentage:
+    int zeros = privZeros.rows;
+    float ratio = 1 - (float)zeros / (float)(image.rows * image.cols);
+    //std::cout << "Ratio is: " << ratio << std::endl;
+
+    //Create dynamic kernel for dilation:
+    int size = (int)(3 + 30 - ratio * 30);
+    Mat kernel = getStructuringElement(MORPH_RECT, Size(size, size));
 
     //Perofrm dilation:
-    dilate(dilation, dilation, Mat(), Point(-1, -1), 1, BORDER_CONSTANT, 255);
+    dilate(image, image, kernel, Point(-1, -1), 1, BORDER_CONSTANT, 255);
 
     //Define zeros after dilation:
-    findNonZero(~dilation, ZeroCoordinates);
+    findNonZero(~image, ZeroCoordinates);
 
     //Find how many zeros we have:
-    int zeros = ZeroCoordinates.rows;
+    zeros = ZeroCoordinates.rows;
 
     //If zeros = 0, everything is dilated and we stop:
     if (zeros == 0)
     {
       ended = true;
+      std::cout << "Itterations: " << ITT << std::endl;
+      ITT = 0;
     }
   }
-
-  //The result is saved in privZeros:
-  //cout << "Z = " << endl << " "  << privZeros << endl << endl;
 
   //Extract x-values:
   int x_values[privZeros.rows];
