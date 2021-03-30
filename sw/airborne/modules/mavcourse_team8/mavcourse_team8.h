@@ -40,4 +40,3 @@ extern void mavcourse_team8_init(void);
 extern void mavcourse_team8_periodic(void);
 
 #endif
-

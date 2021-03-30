@@ -33,25 +33,30 @@
 #include <stdbool.h>
 #include <math.h>
 #include "pthread.h"
+#include "mcu_periph/sys_time.h"
 
-//Clock:
-clock_t start, end;
-double cpu_time_used;
+#include <time.h>
 
 #ifndef OPENCVDEMO_FPS
 #define OPENCVDEMO_FPS 0       ///< Default FPS (zero means run at camera fps)
 #endif
+
 PRINT_CONFIG_VAR(OPENCVDEMO_FPS)
 
 // Function
 float x_cor;
-
 static pthread_mutex_t mutex;
+
+//For timer
+//clock_t start, end;
+//double cpu_time_used;
+
+
 
 //Structure that will be communicated using abi
 struct coordinate_message{
-  int16_t x_c;
-  int16_t y_c;
+  uint16_t x_c;
+  //uint16_t y_c;
   bool updated;
 };
 
@@ -65,16 +70,18 @@ struct image_t *opencv_func(struct image_t *img)
 {
 
   if (img->type == IMAGE_YUV422) {
+
     // Call OpenCV (C++ from paparazzi C function)
     x_cor = opencv_example((char *) img->buf, img->w, img->h);
     
     //Update global coordinates
     pthread_mutex_lock(&mutex);
     global_coordinate_message[0].x_c = x_cor;
-    global_coordinate_message[0].y_c = 2; //Y value needs to be passed as well from the function later on
+    //global_coordinate_message[0].y_c = 2; //Y value needs to be passed as well from the function later on
     global_coordinate_message[0].updated = true;
     pthread_mutex_unlock(&mutex);
     
+        
   }
 
 // opencv_example(NULL, 10,10);
@@ -90,6 +97,7 @@ void opencvdemo_init(void)
 	
   //Use camera to pass iamge to opencv_func
   cv_add_to_device(&OPENCVDEMO_CAMERA, opencv_func, OPENCVDEMO_FPS);
+  
 }
 
 void opencvdemo_periodic(void)
@@ -102,16 +110,14 @@ void opencvdemo_periodic(void)
 
   //Update ABI MSG
   if(local_coordinate_message[0].updated){
-
-    AbiSendMsgTARGET_COORDINATE_TEAM_8(TARGET_COORDINATE_TEAM_8_ID, local_coordinate_message[0].x_c, local_coordinate_message[0].y_c);
-
+    AbiSendMsgTARGET_COORDINATE_TEAM_8(TARGET_COORDINATE_TEAM_8_ID, local_coordinate_message[0].x_c);
     local_coordinate_message[0].updated = false;
 
-    //Clock:
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("Time taken %lf seconds\n", cpu_time_used);
-    start = clock();
+    //Time procedure
+    //end = clock();
+    //cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    //printf("Time taken %lf seconds\n", cpu_time_used);
+    //start = clock();
   }
 
 }

@@ -1,30 +1,3 @@
-/*
- * Copyright (C) Kirk Scheper <kirkscheper@gmail.com>
- *
- * This file is part of paparazzi
- *
- */
-/**
- * @file "modules/orange_avoider/orange_avoider_guided.c"
- * @author Kirk Scheper
- * This module is an example module for the course AE4317 Autonomous Flight of Micro Air Vehicles at the TU Delft.
- * This module is used in combination with a color filter (cv_detect_color_object) and the guided mode of the autopilot.
- * The avoidance strategy is to simply count the total number of orange pixels. When above a certain percentage threshold,
- * (given by color_count_frac) we assume that there is an obstacle and we turn.
- *
- * The color filter settings are set using the cv_detect_color_object. This module can run multiple filters simultaneously
- * so you have to define which filter to use with the ORANGE_AVOIDER_VISUAL_DETECTION_ID setting.
- * This module differs from the simpler orange_avoider.xml in that this is flown in guided mode. This flight mode is
- * less dependent on a global positioning estimate as witht the navigation mode. This module can be used with a simple
- * speed estimate rather than a global position.
- *
- * Here we also need to use our onboard sensors to stay inside of the cyberzoo and not collide with the nets. For this
- * we employ a simple color detector, similar to the orange poles but for green to detect the floor. When the total amount
- * of green drops below a given threshold (given by floor_count_frac) we assume we are near the edge of the zoo and turn
- * around. The color detection is done by the cv_detect_color_object module, use the FLOOR_VISUAL_DETECTION_ID setting to
- * define which filter to use.
- */
-
 #include "modules/mavcourse_team8/mavcourse_team8.h"
 #include "firmwares/rotorcraft/guidance/guidance_h.h"
 #include "firmwares/rotorcraft/navigation.h"
@@ -62,17 +35,17 @@ PRINT_CONFIG_VAR(FPS)
 
 // Initiate setting variables SET INITIAL VALUES HERE!!!!!
 float heading_gain = 0.5f; //Old values: 1.17f
-float speed_gain = 1.35f; //Old values: 1.91f
+float speed_gain = 0.9f; //Old values: 1.91f
 float acceptance_width_percent = 0.1; //Old values: 20
 //int x_clear = 0;
-float heading_increment = 5.f; //Old values: 30.f
+float heading_increment = 10.f; //Old values: 30.f
 float maxDistance = 1.5f; //Old values: 2.f
 int x_diff_threshold = 10;
 int y_diff_threshold = 10;
 int unstuck_iterations = 3;
 
 //FILE for debugging:
-FILE *fptr;
+//FILE *fptr;
 
 /*
  * Increases the NAV heading. Assumes heading is an INT32_ANGLE. It is bound in this function.
@@ -88,7 +61,7 @@ uint8_t increase_nav_heading(float incrementDegrees)
   // for performance reasons the navigation variables are stored and processed in Binary Fixed-Point format
   nav_heading = ANGLE_BFP_OF_REAL(new_heading);
 
-  VERBOSE_PRINT("Increasing heading to %f\n", DegOfRad(new_heading));
+  //VERBOSE_PRINT("Increasing heading to %f\n", DegOfRad(new_heading));
   return false;
 }
 
@@ -102,16 +75,16 @@ uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters)
   // Now determine where to place the waypoint you want to go to
   new_coor->x = stateGetPositionEnu_i()->x + POS_BFP_OF_REAL(sinf(heading) * (distanceMeters));
   new_coor->y = stateGetPositionEnu_i()->y + POS_BFP_OF_REAL(cosf(heading) * (distanceMeters));
-  VERBOSE_PRINT("Calculated %f m forward position. x: %f  y: %f based on pos(%f, %f) and heading(%f)\n", distanceMeters,
-                POS_FLOAT_OF_BFP(new_coor->x), POS_FLOAT_OF_BFP(new_coor->y),
-                stateGetPositionEnu_f()->x, stateGetPositionEnu_f()->y, DegOfRad(heading));
+  //VERBOSE_PRINT("Calculated %f m forward position. x: %f  y: %f based on pos(%f, %f) and heading(%f)\n", distanceMeters,
+  //              POS_FLOAT_OF_BFP(new_coor->x), POS_FLOAT_OF_BFP(new_coor->y),
+  //              stateGetPositionEnu_f()->x, stateGetPositionEnu_f()->y, DegOfRad(heading));
   return false;
 }
 
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
 {
-  VERBOSE_PRINT("Moving waypoint %d to x:%f y:%f\n", waypoint, POS_FLOAT_OF_BFP(new_coor->x),
-                POS_FLOAT_OF_BFP(new_coor->y));
+  //VERBOSE_PRINT("Moving waypoint %d to x:%f y:%f\n", waypoint, POS_FLOAT_OF_BFP(new_coor->x),
+  //              POS_FLOAT_OF_BFP(new_coor->y));
   waypoint_move_xy_i(waypoint, new_coor->x, new_coor->y);
   return false;
 }
@@ -160,8 +133,7 @@ static abi_event direction_ev;
 // Callback function for ABI messaging
 static void direction_cb(
 						uint8_t __attribute__((unused)) sender_id,
-						int16_t x_coord,
-						int16_t __attribute__((unused)) y_coord)
+						int16_t x_coord)
 {
 	x_clear = x_coord;
  }
@@ -197,9 +169,9 @@ void mavcourse_team8_init(void)
 void mavcourse_team8_periodic(void)
 {
 	//Save target to use for debugging:
-	fptr = fopen("data.txt","w");
-	fprintf(fptr,"%d", x_clear);
-	fclose(fptr);
+	//fptr = fopen("data.txt","w");
+	//fprintf(fptr,"%d", x_clear);
+	//fclose(fptr);
 
 	// only evaluate our state machine if we are flying
 	if(!autopilot_in_flight()){
@@ -215,8 +187,8 @@ void mavcourse_team8_periodic(void)
 
 	switch (navigation_state){
 		case FIND_NEW_HEADING:
-			VERBOSE_PRINT("STATE: FINDING NEW HEADING \n");
-			VERBOSE_PRINT("X coordinate: %i \n", x_clear);
+			//VERBOSE_PRINT("STATE: FINDING NEW HEADING \n");
+			//VERBOSE_PRINT("X coordinate: %i \n", x_clear);
 
 			// Proportional relation to heading step and centeredness of dot (yawing towards dot)
 			increase_nav_heading(heading_increment);
@@ -231,7 +203,7 @@ void mavcourse_team8_periodic(void)
 			break;
 
 		case FOLLOWING:
-			VERBOSE_PRINT("STATE: FOLLOWING \n");
+			//VERBOSE_PRINT("STATE: FOLLOWING \n");
 			// Proportional relation to heading rate and centeredness of dot
 			heading_step = ((float)x_clear-(float)x_max/2) * heading_gain / 10.f;
 			heading_step = fminf(heading_step,25.f);
@@ -249,8 +221,8 @@ void mavcourse_team8_periodic(void)
 		    moveWaypointForward(WP_TRAJECTORY, 1.7f * moveDistance);
 
 		    // Calculate if stuck
-		    VERBOSE_PRINT("X_prev: %i \n", x_prev);
-		    VERBOSE_PRINT("Y_prev: %i \n", y_prev);
+		    //VERBOSE_PRINT("X_prev: %i \n", x_prev);
+		    //VERBOSE_PRINT("Y_prev: %i \n", y_prev);
 		    x_diff = abs(x_prev - stateGetPositionEnu_i()->x);
 		    y_diff = abs(y_prev - stateGetPositionEnu_i()->y);
 
@@ -272,7 +244,7 @@ void mavcourse_team8_periodic(void)
 		    }
 			// Else move forward with speed (distance) proportional to 'confidence'
 			else {
-				VERBOSE_PRINT("Move distance: %f m \n",moveDistance);
+				//VERBOSE_PRINT("Move distance: %f m \n",moveDistance);
 			    moveWaypointForward(WP_GOAL, moveDistance);
 			    position_counter = 0;
 			}
@@ -280,7 +252,7 @@ void mavcourse_team8_periodic(void)
 			break;
 
 		case OUT_OF_BOUNDS:
-			VERBOSE_PRINT("STATE: OUT OF BOUNDS \n");
+			//VERBOSE_PRINT("STATE: OUT OF BOUNDS \n");
 		    increase_nav_heading(heading_increment*4);
 		    moveWaypointForward(WP_TRAJECTORY, 1.5f);
 
@@ -292,7 +264,7 @@ void mavcourse_team8_periodic(void)
 	 		break;
 
 		case STUCK:
-			VERBOSE_PRINT("STATE: STUCK \n");
+			//VERBOSE_PRINT("STATE: STUCK \n");
 
 			if (unstuck_counter == 0){
 				moveWaypointForward(WP_GOAL,-1.2f); //Move goal waypoint backwards

@@ -8,4 +8,11 @@
     "[python]": {
         "editor.tabSize": 4,
     },
+    "files.associations": {
+        "iostream": "cpp",
+        "iosfwd": "cpp",
+        "*.expression": "cpp",
+        "alignedvector3": "cpp",
+        "fft": "cpp"
+    },
 }
