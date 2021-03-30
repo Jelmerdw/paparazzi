@@ -110,7 +110,7 @@ void opencvdemo_periodic(void)
 
   //Update ABI MSG
   if(local_coordinate_message[0].updated){
-    AbiSendMsgTARGET_COORDINATE_TEAM_8(TARGET_COORDINATE_TEAM_8_ID, local_coordinate_message[0].x_c);
+    AbiSendMsgTARGET_COORDINATE_TEAM_8(TARGET_COORDINATE_TEAM_8_ID, local_coordinate_message[0].x_c, 0);
     local_coordinate_message[0].updated = false;
 
     //Time procedure

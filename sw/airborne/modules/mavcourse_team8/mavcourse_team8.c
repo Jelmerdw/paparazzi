@@ -35,14 +35,12 @@ PRINT_CONFIG_VAR(FPS)
 
 // Initiate setting variables SET INITIAL VALUES HERE!!!!!
 float heading_gain = 0.5f; //Old values: 1.17f
-float speed_gain = 0.9f; //Old values: 1.91f
+float speed_gain = 1.2f; //Old values: 1.91f
 float acceptance_width_percent = 0.1; //Old values: 20
 //int x_clear = 0;
 float heading_increment = 10.f; //Old values: 30.f
-float maxDistance = 1.5f; //Old values: 2.f
-int x_diff_threshold = 10;
-int y_diff_threshold = 10;
-int unstuck_iterations = 3;
+float maxDistance = 2.f; //Old values: 2.f
+
 
 //FILE for debugging:
 //FILE *fptr;
@@ -104,8 +102,7 @@ uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters)
 enum navigation_state_t {
 	FIND_NEW_HEADING,
  	FOLLOWING,
-	OUT_OF_BOUNDS,
-	STUCK
+	OUT_OF_BOUNDS
 };
 
 enum navigation_state_t navigation_state = FIND_NEW_HEADING;
@@ -116,17 +113,9 @@ float heading_step = 0.f;
 float heading_rate = 0.f;
 int x_clear = 0;
 uint16_t x_max = 520;
-int32_t floor_count = 0;
-int32_t floor_centroid = 0;
 float avoidance_heading_direction = 1.f;
 int acceptance_width;
-int unstuck_counter = 0;
-int position_counter = 0;
 
-int x_prev;
-int y_prev;
-int32_t x_diff = 0;
-int32_t y_diff = 0;
 
 // Define event for ABI messaging
 static abi_event direction_ev;
@@ -159,8 +148,6 @@ void mavcourse_team8_init(void)
 	// Bind vertical edge detection callback (x_clear is the x coordinate of the clear direction-> the dot)
 	AbiBindMsgTARGET_COORDINATE_TEAM_8(VERTICAL_EDGE_DETECTION_ID, &direction_ev, direction_cb);
 
-	x_prev = stateGetPositionEnu_i()->x;
-	y_prev = stateGetPositionEnu_i()->y;
 }
 
 /*
@@ -177,9 +164,9 @@ void mavcourse_team8_periodic(void)
 	if(!autopilot_in_flight()){
 		return;
 	}
-
+	VERBOSE_PRINT("X coord: %i \n", x_clear);
 	if(x_clear > x_max || x_clear < -1){
-		x_clear = 240;
+		x_clear = 260;
 	}
 	acceptance_width = acceptance_width_percent * x_max;
 
@@ -220,16 +207,6 @@ void mavcourse_team8_periodic(void)
 
 		    moveWaypointForward(WP_TRAJECTORY, 1.7f * moveDistance);
 
-		    // Calculate if stuck
-		    //VERBOSE_PRINT("X_prev: %i \n", x_prev);
-		    //VERBOSE_PRINT("Y_prev: %i \n", y_prev);
-		    x_diff = abs(x_prev - stateGetPositionEnu_i()->x);
-		    y_diff = abs(y_prev - stateGetPositionEnu_i()->y);
-
-		    if (x_diff < x_diff_threshold && y_diff < y_diff_threshold){
-		    	position_counter++;
-		    }
-
 		    // If dot outside acceptance width OR waypoint outside cyberzoo, move back to finding a new heading
 		    if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
 		    	navigation_state = OUT_OF_BOUNDS;
@@ -238,15 +215,11 @@ void mavcourse_team8_periodic(void)
 		    else if (abs(x_clear-x_max/2) >= acceptance_width){
 				navigation_state = FIND_NEW_HEADING;
 			}
-		    else if (position_counter >= 5){
-		    	navigation_state = STUCK;
-		    	position_counter =0;
-		    }
+
 			// Else move forward with speed (distance) proportional to 'confidence'
 			else {
 				//VERBOSE_PRINT("Move distance: %f m \n",moveDistance);
 			    moveWaypointForward(WP_GOAL, moveDistance);
-			    position_counter = 0;
 			}
 
 			break;
@@ -262,22 +235,6 @@ void mavcourse_team8_periodic(void)
 		      }
 
 	 		break;
-
-		case STUCK:
-			//VERBOSE_PRINT("STATE: STUCK \n");
-
-			if (unstuck_counter == 0){
-				moveWaypointForward(WP_GOAL,-1.2f); //Move goal waypoint backwards
-				increase_nav_heading(heading_increment);
-				}
-
-			unstuck_counter++;
-
-			if (unstuck_counter >= unstuck_iterations){
-				unstuck_counter =0;
-				navigation_state = FIND_NEW_HEADING;
-			}
-			break;
 
 		default:
 			navigation_state = FIND_NEW_HEADING;

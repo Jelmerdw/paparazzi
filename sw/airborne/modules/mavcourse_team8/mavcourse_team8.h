@@ -34,7 +34,6 @@ extern float speed_gain;
 extern float acceptance_width_percent;
 extern float heading_increment;
 extern float maxDistance;
-extern int unstuck_iterations;
 
 extern void mavcourse_team8_init(void);
 extern void mavcourse_team8_periodic(void);
